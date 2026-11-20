@@ -9,11 +9,16 @@
         <item>5th Year</item>
     </string-array>
 
-    <!-- Sample rows so the list screen looks filled in (design only, no database). -->
+    <!-- Sample rows so the list screen looks filled in (design only, no database).
+         Format: student no|last name|first name|middle name|year level|specialization (last two parts may be empty). -->
     <string-array name="sample_students">
-        <item>2023-00123\nDela Cruz, Juan Santos\n3rd Year · Software Engineering</item>
-        <item>2024-00456\nGarcia, Maria Lopez\n2nd Year · Data Science</item>
-        <item>2025-00789\nReyes, Jose\n1st Year</item>
-        <item>2022-00321\nSantos, Ana Cruz\n4th Year · Network Security</item>
+        <item>2023-00123|Dela Cruz|Juan|Santos|3rd Year|Software Engineering</item>
+        <item>2024-00456|Garcia|Maria|Lopez|2nd Year|Data Science</item>
+        <item>2025-00789|Reyes|Jose||1st Year|</item>
+        <item>2022-00321|Santos|Ana|Cruz|4th Year|Network Security</item>
+        <item>2023-00217|Bautista|Mark Anthony|Villanueva|3rd Year|Web and Mobile Development</item>
+        <item>2025-00402|Mendoza|Kristine|Ramos|1st Year|</item>
+        <item>2021-00098|Aquino|Paolo|Domingo|5th Year|Computer Engineering</item>
+        <item>2024-00733|Villanueva|Bea|Torres|2nd Year|Information Systems</item>
     </string-array>
 </resources>
