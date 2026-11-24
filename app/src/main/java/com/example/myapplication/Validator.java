@@ -8,7 +8,7 @@ import java.util.regex.Pattern;
  */
 public final class Validator {
     private static final Pattern USERNAME = Pattern.compile("[A-Za-z0-9._]+");
-    private static final Pattern STUDENT_NO = Pattern.compile("\\d{4}-\\d{4,6}");
+    private static final Pattern STUDENT_NO = Pattern.compile("\\d{4}-\\d{7}");
     // At least one letter; letters (including ñ and accents), spaces, hyphens, apostrophes and periods allowed:
     // "Dela Cruz", "O'Neil", "Ma. Lourdes", "Peña".
     private static final Pattern NAME = Pattern.compile("(?=.*\\p{L})[\\p{L} .'-]+");
@@ -30,8 +30,22 @@ public final class Validator {
     public static String newPassword(String s) {
         if (s.isEmpty()) return "Enter a password";
         if (s.length() < 8) return "Use at least 8 characters";
-        if (!s.matches(".*[A-Za-z].*") || !s.matches(".*\\d.*")) return "Include at least one letter and one number";
+        if (!hasLetter(s) || !hasDigit(s)) return "Include at least one letter and one number";
         return null;
+    }
+
+    public static boolean hasLetter(String s) {
+        return s.matches(".*[A-Za-z].*");
+    }
+
+    public static boolean hasDigit(String s) {
+        return s.matches(".*\\d.*");
+    }
+
+    /** 0 to 4: one point per rule of newPassword that is met, and one more for 12+ characters. */
+    public static int passwordStrength(String s) {
+        int met = (s.length() >= 8 ? 1 : 0) + (hasLetter(s) ? 1 : 0) + (hasDigit(s) ? 1 : 0);
+        return met == 3 && s.length() >= 12 ? 4 : met;
     }
 
     public static String confirmPassword(String password, String confirm) {
@@ -42,8 +56,15 @@ public final class Validator {
 
     public static String studentNumber(String s) {
         if (s.isEmpty()) return "Enter the student number";
-        if (!STUDENT_NO.matcher(s).matches()) return "Use the format YYYY-NNNNN, e.g. 2025-00123";
+        if (!STUDENT_NO.matcher(s).matches()) return "Use the format YYYY-NNNNNNN, e.g. 2025-0012345";
         return null;
+    }
+
+    /** Keeps digits only (11 at most) and puts the hyphen in: "20250012345" becomes "2025-0012345". */
+    public static String formatStudentNumber(String s) {
+        String digits = s.replaceAll("\\D", "");
+        if (digits.length() > 11) digits = digits.substring(0, 11);
+        return digits.length() <= 4 ? digits : digits.substring(0, 4) + "-" + digits.substring(4);
     }
 
     public static String name(String s, String what, boolean required) {

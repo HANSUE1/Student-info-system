@@ -3,14 +3,18 @@ package com.example.myapplication;
 import android.content.Intent;
 import android.os.Bundle;
 import android.view.inputmethod.EditorInfo;
+import android.widget.TextView;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.core.widget.TextViewCompat;
 
 import com.google.android.material.appbar.MaterialToolbar;
+import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.android.material.textfield.TextInputLayout;
 
 /** Create-account screen. Design only: input is checked, but no account is stored. */
@@ -40,6 +44,11 @@ public class RegisterActivity extends AppCompatActivity {
         password = findViewById(R.id.field_password);
         confirm = findViewById(R.id.field_confirm);
         Forms.clearErrorOnEdit(username, password, confirm);
+        Forms.validateOnBlur(username, () -> Validator.username(Forms.text(username)));
+        Forms.validateOnBlur(password, () -> Validator.newPassword(Forms.raw(password)));
+        Forms.validateOnBlur(confirm, () -> Validator.confirmPassword(Forms.raw(password), Forms.raw(confirm)));
+        if (password.getEditText() != null) Forms.onEdit(password.getEditText(), this::showStrength);
+        showStrength();
 
         findViewById(R.id.btn_create).setOnClickListener(v -> register());
         if (confirm.getEditText() != null) {
@@ -49,6 +58,31 @@ public class RegisterActivity extends AppCompatActivity {
                 return true;
             });
         }
+    }
+
+    /** Updates the strength bar and ticks each password rule while the user types. */
+    private void showStrength() {
+        String pw = Forms.raw(password);
+        int score = Validator.passwordStrength(pw);
+        LinearProgressIndicator bar = findViewById(R.id.progress_strength);
+        bar.setIndicatorColor(ContextCompat.getColor(this,
+                score == 4 ? R.color.success : score == 3 ? R.color.md_primary : R.color.warning));
+        bar.setProgressCompat(score, true);
+        TextView label = findViewById(R.id.text_strength);
+        label.setText(pw.isEmpty() ? "Password strength" : "Password strength: "
+                + (score == 4 ? "strong" : score == 3 ? "good" : "weak"));
+        showRule(R.id.rule_length, pw.length() >= 8);
+        showRule(R.id.rule_letter, Validator.hasLetter(pw));
+        showRule(R.id.rule_digit, Validator.hasDigit(pw));
+    }
+
+    private void showRule(int id, boolean met) {
+        TextView rule = findViewById(id);
+        rule.setCompoundDrawablesRelativeWithIntrinsicBounds(
+                met ? R.drawable.ic_rule_met : R.drawable.ic_rule_pending, 0, 0, 0);
+        TextViewCompat.setCompoundDrawableTintList(rule, ContextCompat.getColorStateList(this,
+                met ? R.color.success : R.color.md_outline));
+        ViewCompat.setStateDescription(rule, met ? "met" : "not met yet");
     }
 
     private void register() {

@@ -34,12 +34,33 @@ public class ValidatorTest {
 
     @Test
     public void studentNumber() {
-        assertNull(Validator.studentNumber("2025-00123"));
-        assertNull(Validator.studentNumber("2025-1234"));
+        assertNull(Validator.studentNumber("2025-0012345")); // 7 digits after hyphen
+        assertNull(Validator.studentNumber("2023-0009876")); // 7 digits after hyphen
         assertNotNull(Validator.studentNumber(""));
-        assertNotNull(Validator.studentNumber("202500123"));
-        assertNotNull(Validator.studentNumber("25-00123"));
-        assertNotNull(Validator.studentNumber("2025-ABCDE"));
+        assertNotNull(Validator.studentNumber("20250012345"));   // missing hyphen
+        assertNotNull(Validator.studentNumber("25-0012345"));    // 2-digit year
+        assertNotNull(Validator.studentNumber("2025-ABCDEFG"));  // letters
+        assertNotNull(Validator.studentNumber("2025-001234"));   // only 6 digits
+        assertNotNull(Validator.studentNumber("2025-00123456")); // 8 digits
+    }
+
+    @Test
+    public void formatStudentNumber() {
+        assertEquals("", Validator.formatStudentNumber(""));
+        assertEquals("2025", Validator.formatStudentNumber("2025"));
+        assertEquals("2025", Validator.formatStudentNumber("2025-"));    // deleting back past the hyphen
+        assertEquals("2025-0", Validator.formatStudentNumber("20250"));
+        assertEquals("2025-0012345", Validator.formatStudentNumber("2025-0012345"));
+        assertEquals("2025-0012345", Validator.formatStudentNumber(" 2025 0012345 678")); // pasted, too long
+    }
+
+    @Test
+    public void passwordStrength() {
+        assertEquals(0, Validator.passwordStrength(""));
+        assertEquals(1, Validator.passwordStrength("abc"));
+        assertEquals(2, Validator.passwordStrength("abcdefghijklmn")); // long but no number
+        assertEquals(3, Validator.passwordStrength("secret123"));
+        assertEquals(4, Validator.passwordStrength("secret123456"));
     }
 
     @Test

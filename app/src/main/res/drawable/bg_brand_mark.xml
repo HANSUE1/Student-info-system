@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Square behind the school icon on the login brand panel. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <solid android:color="@color/on_brand_panel" />
+    <corners android:radius="12dp" />
+</shape>

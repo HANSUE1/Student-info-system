@@ -38,9 +38,17 @@ public class LoginActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         WindowCompat.enableEdgeToEdge(getWindow());
         setContentView(R.layout.activity_login);
+        // The brand panel is dark in both themes, so status bar icons stay light here.
+        WindowCompat.getInsetsController(getWindow(), getWindow().getDecorView()).setAppearanceLightStatusBars(false);
+        View sheet = findViewById(R.id.sheet);
+        int sheetPadding = sheet.getPaddingBottom();
         ViewCompat.setOnApplyWindowInsetsListener(findViewById(R.id.main), (v, insets) -> {
-            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.ime());
-            v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
+            Insets bars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            int keyboard = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom;
+            v.setPadding(bars.left, bars.top, bars.right, keyboard);
+            // Keyboard closed: the sheet itself runs under the navigation bar.
+            sheet.setPadding(sheet.getPaddingLeft(), sheet.getPaddingTop(), sheet.getPaddingRight(),
+                    sheetPadding + (keyboard > 0 ? 0 : bars.bottom));
             return insets;
         });
 
@@ -48,8 +56,7 @@ public class LoginActivity extends AppCompatActivity {
         password = findViewById(R.id.field_password);
         Forms.clearErrorOnEdit(username, password);
 
-        View loginButton = findViewById(R.id.btn_login);
-        loginButton.setOnClickListener(v -> login());
+        findViewById(R.id.btn_login).setOnClickListener(v -> login());
         if (password.getEditText() != null) {
             password.getEditText().setOnEditorActionListener((v, actionId, event) -> {
                 if (actionId != EditorInfo.IME_ACTION_DONE) return false;
@@ -63,12 +70,7 @@ public class LoginActivity extends AppCompatActivity {
         });
 
         if (savedInstanceState == null) { // play the entrance once, not again after rotating the phone
-            View logo = findViewById(R.id.logo);
-            Motion.riseIn(logo, findViewById(R.id.text_title), findViewById(R.id.text_subtitle),
-                    username, password, loginButton, findViewById(R.id.row_register));
-            logo.setScaleX(0.6f);
-            logo.setScaleY(0.6f);
-            logo.animate().scaleX(1f).scaleY(1f);
+            Motion.riseIn(sheet);
         }
     }
 

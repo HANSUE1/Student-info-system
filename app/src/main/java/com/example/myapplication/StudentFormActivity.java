@@ -1,24 +1,26 @@
 package com.example.myapplication;
 
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.Selection;
 import android.view.inputmethod.EditorInfo;
 
 import androidx.activity.OnBackPressedCallback;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.graphics.Insets;
+import androidx.core.view.HapticFeedbackConstantsCompat;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 
 import com.google.android.material.appbar.MaterialToolbar;
-import com.google.android.material.color.MaterialColors;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+import com.google.android.material.progressindicator.LinearProgressIndicator;
 import com.google.android.material.textfield.TextInputLayout;
-import com.google.android.material.transition.platform.MaterialContainerTransform;
-import com.google.android.material.transition.platform.MaterialContainerTransformSharedElementCallback;
 
 /** Add Student form. Design only: input is checked, then the screen closes without storing anything. */
 public class StudentFormActivity extends AppCompatActivity {
+    private MaterialToolbar toolbar;
     private TextInputLayout studentNo;
     private TextInputLayout lastName;
     private TextInputLayout firstName;
@@ -29,10 +31,7 @@ public class StudentFormActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         // This whole screen grows out of the list's Add button, and shrinks back into it on close.
-        findViewById(android.R.id.content).setTransitionName("add_student");
-        setEnterSharedElementCallback(new MaterialContainerTransformSharedElementCallback());
-        getWindow().setSharedElementEnterTransition(containerTransform(450));
-        getWindow().setSharedElementReturnTransition(containerTransform(350));
+        Motion.growFrom(this, "add_student");
         super.onCreate(savedInstanceState);
         WindowCompat.enableEdgeToEdge(getWindow());
         setContentView(R.layout.activity_student_form);
@@ -50,7 +49,13 @@ public class StudentFormActivity extends AppCompatActivity {
         specialization = findViewById(R.id.field_specialization);
         Forms.clearErrorOnEdit(allFields());
 
-        MaterialToolbar toolbar = findViewById(R.id.toolbar);
+        Forms.validateOnBlur(studentNo, () -> Validator.studentNumber(Forms.text(studentNo)));
+        Forms.validateOnBlur(lastName, () -> Validator.name(Forms.text(lastName), "last name", true));
+        Forms.validateOnBlur(firstName, () -> Validator.name(Forms.text(firstName), "first name", true));
+        Forms.validateOnBlur(middleName, () -> Validator.name(Forms.text(middleName), "middle name", false));
+        Forms.validateOnBlur(specialization, () -> Validator.specialization(Forms.text(specialization)));
+
+        toolbar = findViewById(R.id.toolbar);
         toolbar.setNavigationOnClickListener(v -> getOnBackPressedDispatcher().onBackPressed());
         findViewById(R.id.btn_save).setOnClickListener(v -> save());
         if (specialization.getEditText() != null) {
@@ -62,13 +67,10 @@ public class StudentFormActivity extends AppCompatActivity {
         }
 
         // Back with unsaved input asks first, so typed details are not lost by accident.
-        getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
+        // Off while the form is empty, so the system back preview still works.
+        OnBackPressedCallback confirmDiscard = new OnBackPressedCallback(false) {
             @Override
             public void handleOnBackPressed() {
-                if (!hasInput()) {
-                    leave(this);
-                    return;
-                }
                 new MaterialAlertDialogBuilder(StudentFormActivity.this)
                         .setTitle("Discard this student?")
                         .setMessage("The details you typed will be lost.")
@@ -76,7 +78,44 @@ public class StudentFormActivity extends AppCompatActivity {
                         .setPositiveButton("Discard", (dialog, which) -> leave(this))
                         .show();
             }
-        });
+        };
+        getOnBackPressedDispatcher().addCallback(this, confirmDiscard);
+
+        if (studentNo.getEditText() != null) Forms.onEdit(studentNo.getEditText(), this::formatStudentNumber);
+        for (TextInputLayout field : allFields()) {
+            if (field.getEditText() == null) continue;
+            Forms.onEdit(field.getEditText(), () -> {
+                confirmDiscard.setEnabled(hasInput());
+                showProgress();
+            });
+        }
+        showProgress();
+    }
+
+    /** Adds the hyphen while the user types, and keeps the cursor next to the same digit. */
+    private void formatStudentNumber() {
+        Editable s = studentNo.getEditText().getText();
+        String formatted = Validator.formatStudentNumber(s.toString());
+        if (formatted.contentEquals(s)) return;
+        int cursor = Math.max(0, Selection.getSelectionStart(s));
+        int digitsBefore = s.subSequence(0, cursor).toString().replaceAll("\\D", "").length();
+        s.replace(0, s.length(), formatted);
+        Selection.setSelection(s, Math.min(s.length(), digitsBefore + (digitsBefore > 4 ? 1 : 0)));
+    }
+
+    /** Ticks each valid required field and moves the progress line under the toolbar. */
+    private void showProgress() {
+        boolean number = Validator.studentNumber(Forms.text(studentNo)) == null;
+        boolean last = Validator.name(Forms.text(lastName), "last name", true) == null;
+        boolean first = Validator.name(Forms.text(firstName), "first name", true) == null;
+        boolean year = Validator.yearLevel(Forms.text(yearLevel)) == null;
+        studentNo.setEndIconVisible(number);
+        lastName.setEndIconVisible(last);
+        firstName.setEndIconVisible(first);
+        int done = (number ? 1 : 0) + (last ? 1 : 0) + (first ? 1 : 0) + (year ? 1 : 0);
+        toolbar.setSubtitle(done + " of 4 required fields");
+        LinearProgressIndicator progress = findViewById(R.id.progress_required);
+        progress.setProgressCompat(done, true);
     }
 
     private void leave(OnBackPressedCallback callback) {
@@ -95,6 +134,7 @@ public class StudentFormActivity extends AppCompatActivity {
             Forms.focusFirstError(allFields());
             return;
         }
+        ViewCompat.performHapticFeedback(findViewById(R.id.btn_save), HapticFeedbackConstantsCompat.CONFIRM);
         setResult(RESULT_OK); // the list screen shows the "saved" message
         finishAfterTransition();
     }
@@ -108,15 +148,5 @@ public class StudentFormActivity extends AppCompatActivity {
 
     private TextInputLayout[] allFields() {
         return new TextInputLayout[]{studentNo, lastName, firstName, middleName, yearLevel, specialization};
-    }
-
-    private MaterialContainerTransform containerTransform(long durationMs) {
-        MaterialContainerTransform transform = new MaterialContainerTransform();
-        transform.addTarget(android.R.id.content);
-        transform.setDuration(durationMs);
-        // Solid surface color while morphing, so nothing shows through the growing shape.
-        transform.setAllContainerColors(MaterialColors.getColor(this,
-                com.google.android.material.R.attr.colorSurface, 0));
-        return transform;
     }
 }

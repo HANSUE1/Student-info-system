@@ -41,7 +41,7 @@ if (!valid) {
 | Username | text | Yes | `[A-Za-z0-9._]+` (letters, digits, `.`, `_` only; no spaces) | 4–20 | `juan_dc` | `Enter a username` / `Use 4 to 20 characters` / `Use letters, numbers, . or _ only (no spaces)` |
 | Password | textPassword | Yes | At least one letter **and** at least one digit | ≥ 8 | `secret123` | `Enter a password` / `Use at least 8 characters` / `Include at least one letter and one number` |
 | Confirm password | textPassword | Yes | Must equal the password field | ≥ 8 | `secret123` | `Re-enter your password` / `Passwords do not match` |
-| Student number | text | Yes | `YYYY-NNNN(NN)` — 4-digit year, dash, 4–6 digits | fixed | `2025-00123` | `Enter the student number` / `Use the format YYYY-NNNNN, e.g. 2025-00123` |
+| Student number | text | Yes | `YYYY-NNNNNNN` — 4-digit year, dash, 7 digits | fixed | `2025-0012345` | `Enter the student number` / `Use the format YYYY-NNNNNNN, e.g. 2025-0012345` |
 | Last name | text | Yes | Unicode letters, spaces, `-`, `'`, `.`; must contain ≥ 1 letter | ≤ 50 | `Dela Cruz` | `Enter the last name` / `Keep it under 50 characters` / `Use letters only (spaces, - ' and . are allowed)` |
 | First name | text | Yes | same as last name | ≤ 50 | `Ma. Lourdes` | same as last name |
 | Middle name | text | No | same as last name | ≤ 50 | `O'Neil-Peña` | `Keep it under 50 characters` / `Use letters only ...` (empty is valid) |
@@ -53,13 +53,13 @@ if (!valid) {
 The platform identifier `yyyy-#######` maps to the student number pattern:
 
 ```
-^\d{4}-\d{4,6}$
+^\d{4}-\d{7}$
 ```
 
-- 4 digits (calendar/enrolment year), a literal hyphen `-`, then 4–6 digits.
+- 4 digits (calendar/enrolment year), a literal hyphen `-`, then exactly 7 digits.
 - Always include the hyphen. No letters, no spaces, no leading/trailing whitespace.
-- Valid: `2025-00123`, `2025-1234`, `2026-000001`
-- Invalid: `202500123` (missing hyphen), `25-00123` (2-digit year), `2025-ABCDE` (letters), ` 2025-00123 ` (whitespace unless trimmed first)
+- Valid: `2025-0012345`, `2025-0000001`, `2026-9999999`
+- Invalid: `20250012345` (missing hyphen), `25-0012345` (2-digit year), `2025-ABCDEFG` (letters), `2025-001234` (only 6 digits), ` 2025-0012345 ` (whitespace unless trimmed first)
 
 > All field text is trimmed before validation (`Forms.text`); passwords are read raw (`Forms.raw`) so surrounding spaces inside a password are preserved.
 
@@ -96,6 +96,7 @@ Existing rules: `required`, `username`, `newPassword`, `confirmPassword`, `stude
 - Always pair with a `TextInputEditText` inside the layout.
 - Set `app:counterEnabled="true"` and `app:counterMaxLength="<max>"` on length-limited fields.
 - Set `app:helperText` to the exact same rule text shown in validation errors (keeps hint and error consistent).
+- Exception: the new-password field shows a live rule checklist and strength bar instead of `helperText`.
 - Set `android:hint` to the field label.
 - Use `android:autofillHints` (`username`, `newPassword`, etc.) and matching `android:inputType`.
 - Password fields use `app:endIconMode="password_toggle"`.
@@ -104,10 +105,11 @@ Existing rules: `required`, `username`, `newPassword`, `confirmPassword`, `stude
 ### Activity/controller
 1. Bind fields with `findViewById` in `onCreate`.
 2. Call `Forms.clearErrorOnEdit(field1, field2, ...)` so errors disappear on edit.
-3. On submit button click (and on `IME_ACTION_DONE` of the last field), call the submit method.
-4. In the submit method, run the `&`-chained `Forms.show(...)` validation, then `Forms.focusFirstError(...)` on failure.
-5. On success, return `setResult(RESULT_OK, ...)` and `finish()`, or persist via the storage layer if one exists.
-6. Override `finish()` to call `Motion.back(this)` for the standard back animation.
+3. Call `Forms.validateOnBlur(field, rule)` so a filled-in field is checked when the user leaves it. Empty fields wait for submit.
+4. On submit button click (and on `IME_ACTION_DONE` of the last field), call the submit method.
+5. In the submit method, run the `&`-chained `Forms.show(...)` validation, then `Forms.focusFirstError(...)` on failure.
+6. On success, return `setResult(RESULT_OK, ...)` and `finish()`, or persist via the storage layer if one exists.
+7. Override `finish()` to call `Motion.back(this)` for the standard back animation.
 
 ### Error messaging
 - Errors are set via `TextInputLayout.setError(...)` and cleared via `setError(null)`.
@@ -218,7 +220,7 @@ public void ruleA() {
 - [ ] `Forms.focusFirstError(...)` runs on failure.
 - [ ] `Forms.clearErrorOnEdit(...)` is wired for every field.
 - [ ] XML uses Material3 `TextInputLayout` + `TextInputEditText`, with matching `helperText` and `counterMaxLength`.
-- [ ] Student numbers follow `^\d{4}-\d{4,6}$` (e.g. `2025-00123`).
+- [ ] Student numbers follow `^\d{4}-\d{7}$` (e.g. `2025-0012345`).
 - [ ] New rules are covered in `ValidatorTest` with valid, empty, syntax-invalid, and length-invalid cases.
 - [ ] Error wording matches existing `Validator` messages for the same rule.
 
@@ -228,6 +230,6 @@ public void ruleA() {
 - `app/src/main/java/com/example/myapplication/Validator.java` — validation rules + regex
 - `app/src/main/java/com/example/myapplication/Forms.java` — field read/error/focus helpers
 - `app/src/main/java/com/example/myapplication/RegisterActivity.java` — account registration reference
-- `app/src/main/java/com/example/myapplication/StudentFormActivity.java` — student registration reference (uses student number `YYYY-NNNNN`)
+- `app/src/main/java/com/example/myapplication/StudentFormActivity.java` — student registration reference (uses student number `YYYY-NNNNNNN`)
 - `app/src/test/java/com/example/myapplication/ValidatorTest.java` — expected rule behavior
 - `app/src/main/res/layout/activity_register.xml` — register layout reference
